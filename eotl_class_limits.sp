@@ -6,7 +6,7 @@
 #include <tf2_stocks>
 
 #define PLUGIN_AUTHOR  "ack"
-#define PLUGIN_VERSION "0.10"
+#define PLUGIN_VERSION "0.11"
 
 public Plugin myinfo = {
 	name = "eotl_class_limits",
@@ -46,7 +46,7 @@ ConVar g_cvWantClass;
 ConVar g_cvLimits[TEAM_MAX + 1][CLASS_MAX + 1];
 int g_iLastClass[MAXPLAYERS + 1];
 int g_iWantClass[MAXPLAYERS + 1];
-bool g_bRoundOver;
+bool g_bRoundSwaps;
 ConVar g_cvDebug;
 ClassCache g_eClassCache[MAXPLAYERS + 1];
 
@@ -144,7 +144,7 @@ public void OnMapStart() {
         g_iLastClass[client] = CLASS_UNKNOWN;
         g_iWantClass[client] = CLASS_UNKNOWN;
     }
-    g_bRoundOver = false;
+    g_bRoundSwaps = false;
 }
 
 public void OnClientConnected(int client) {
@@ -296,15 +296,15 @@ public Action EventPlayerTeam(Handle event, const char[] name, bool dontBroadcas
 
     GetClassCounts(team, counts);
 
-    // if we are in the end round state we are assuming this team change
+    // if we are in the round swaps state we are assuming this team change
     // will be from the mass team swap.  In this case we just need to
     // make sure we are at or under the limit.
-    if(g_bRoundOver) {
+    if(g_bRoundSwaps) {
         if(counts[class] <= g_cvLimits[team][class].IntValue) {
             return Plugin_Continue;
         }
     } else {
-    // outside a end round state, this team change would indicate an
+    // outside a round swaps state, this team change would indicate an
     // additional player being added to the class, so we need make
     // we are under the limit.
         if(counts[class] < g_cvLimits[team][class].IntValue) {
@@ -328,22 +328,37 @@ public Action EventPlayerTeam(Handle event, const char[] name, bool dontBroadcas
     return Plugin_Continue;
 }
 
+// Usually right after the event round start event players will be mass
+// swapped between teams.  Add a small delay before considering ours
+// round swaps over
 public Action EventRoundStart(Handle event, const char[] name, bool dontBroadcast) {
-    g_bRoundOver = false;
-    LogDebug("EventRoundStart");
+    LogDebug("EventRoundStart %d", g_bRoundSwaps);
+
+    if(g_bRoundSwaps) {
+        CreateTimer(0.5, RoundStartTimer, _);
+    }
+
+    return Plugin_Continue;
+}
+
+public Action RoundStartTimer(Handle timer) {
+    LogDebug("Ending Round Swaps Period");
+    g_bRoundSwaps = false;
     return Plugin_Continue;
 }
 
 public Action EventRoundEnd(Handle event, const char[] name, bool dontBroadcast) {
     int client, team, class;
 
+    LogDebug("EventRoundEnd");
     // only care about full round which would then cause a team swap
     if(StrEqual(name, "teamplay_round_win") && !GetEventInt(event, "full_round")) {
-	    return Plugin_Continue;
+        LogDebug("Ignoring, mini round");
+        return Plugin_Continue;
     }
 
-    LogDebug("EventRoundEnd");
-    g_bRoundOver = true;
+    LogDebug("Starting Round Swaps Period");
+    g_bRoundSwaps = true;
     for(client = 1; client <= MaxClients; client++) {
         if(!IsClientConnected(client) || !IsClientInGame(client)) {
             g_eClassCache[client].isValid = false;
@@ -482,7 +497,7 @@ bool AllowClassChange(int client, int team, int targetClass) {
 void GetClassCounts(int team, int counts[CLASS_MAX + 1]) {
     int client, clientClass, clientTeam;
 
-    LogDebug("GetClassCounts: %s cache", (g_bRoundOver ? "using" : "not using"));
+    LogDebug("GetClassCounts: %s cache", (g_bRoundSwaps ? "using" : "not using"));
     for(int i = 0; i <= CLASS_MAX; i++) {
         counts[i] = 0;
     }
@@ -492,11 +507,13 @@ void GetClassCounts(int team, int counts[CLASS_MAX + 1]) {
             continue;
         }
 
-        if(g_bRoundOver && !g_eClassCache[client].isValid) {
-            continue;
-        }
-
-        if(g_bRoundOver) {
+        // if we are in the round swaps state we need to use
+        // the cached class/team data since live data will be
+        // a mess with everyone swapping teams
+        if(g_bRoundSwaps) {
+            if(!g_eClassCache[client].isValid) {
+                continue;
+            }
             clientTeam = g_eClassCache[client].team;
             clientClass = g_eClassCache[client].class;
 
