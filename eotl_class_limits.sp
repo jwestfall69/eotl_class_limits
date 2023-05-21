@@ -180,9 +180,7 @@ public Action EventPlayerSpawn(Handle event, const char[] name, bool dontBroadca
 }
 
 // When a player dies see if there are too many of thier class,
-// and if there is force them to a random class.  This can
-// specifically happen if the plugin is enabled mid round or
-// if changes where made to the limits.
+// and if there is force them to a random class.
 public Action EventPlayerDeath(Handle event, const char[] name, bool dontBroadcast) {
     int client, team, class, counts[CLASS_MAX + 1], picked;
 
@@ -536,7 +534,6 @@ void GetClassCounts(int team, int counts[CLASS_MAX + 1]) {
 
         counts[clientClass]++;
     }
-
 }
 
 // put valid classes onto an ArrayList and pick one of those

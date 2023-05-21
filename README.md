@@ -1,10 +1,10 @@
 # eotl_class_limits
 
-This is a TF2 sourcemod plugin.
+This is a TF2 sourcemod plugin I wrote for the [EOTL](https://www.endofthelinegaming.com/) community.
 
-This is meant to be a drop in replacement for the [classrestrict](https://forums.alliedmods.net/showpost.php?p=2696880&postcount=479) plugin.  The original plugin was causing server crashes, which prompted the creation of eotl_class_limits plugin.  I did not implement the sm_classrestrict_(flags|immunity) ConVars from the original plug, as no use to us.
+This is meant to be a drop in replacement for the [classrestrict](https://forums.alliedmods.net/showpost.php?p=2696880&postcount=479) plugin.  The original plugin was causing server crashes, which prompted the creation of eotl_class_limits plugin.  I did not implement the sm_classrestrict_(flags|immunity) ConVars from the original plug, as we had no use for them.
 
-The classrestrict plugin would allow the player to switch to any class and then would check to see if there are too many of that class.  If player caused an over limit it would force change the player to another (previous) class and respawn them.  This force change/respawn is what was causing the crashes.
+The original classrestrict plugin would allow the player to switch to any class and then would check to see if there are too many of that class.  If player caused an over limit the plugin would force change the player to another (previous) class and respawn them.  This force change/respawn is what was found to be causing the crashes.
 
 Th eotl_class_limits plugin takes a different approach in that it will block the class change (joinclass [class]) if it will cause there to be too many of that class.
 
@@ -18,7 +18,7 @@ In theory this check should only trigger under 2 conditions:
   * A ConVar update that results in a class overage
   * When the team swap happens at the end of a round and there ends up being to many of a class after the swap.  (ie: red team has 3 pyros, blue team has a 2 pyro limit, team swap happens, first pyro to die will get forced off the class).
 
-This plugin also has a extra feature (!wantclass) to allow players to indicate that they want to play a class that is full.  When the player dies, it will auto switch to their wanted class if its under its limit.
+This plugin also has a extra feature (!wantclass [class]) to allow players to indicate that they want to play a class that is full.  When the player dies, it will auto switch to their wanted class if its under its limit.
 
 ### Say Commands
 <hr>
@@ -27,7 +27,7 @@ This plugin also has a extra feature (!wantclass) to allow players to indicate t
 
 This will flag the player as wanting to be [class].  When the player dies it will switch them to [class] if [class] is below its class limit.
 
-!wantclass is persistent across rounds but not map changes.  When a client becomes their wanted class, it will auto-remove the wanted for them.
+!wantclass is persistent across rounds but not map changes.  When a client becomes their wanted class, it will clear the wantclass for them.
 
 !wantclass called without any args will clear the wanted class if they have a one, else it will print the command usage.
 
